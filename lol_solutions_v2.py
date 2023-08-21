@@ -137,9 +137,10 @@ plt.savefig('templates/png_files/count_by_lang.png')
 plt.close()
 
 day_counts = data['day'].value_counts()
+significant_days = day_counts[day_counts >= day_counts.sum() * 0.01]
 
 plt.figure(figsize=(8, 8))
-plt.pie(day_counts, labels=day_counts.index, autopct='%1.1f%%', startangle=140)
+plt.pie(significant_days, labels=significant_days.index, autopct='%1.1f%%', startangle=140)
 plt.title("Розподіл розміщених рішень за днями")
 #plt.show()
 plt.savefig('templates/png_files/daily_distribution.png')
@@ -341,7 +342,7 @@ top_users_per_day = solved_tasks_per_day_per_user[solved_tasks_per_day_per_user[
 
 top_users_per_day_df = top_users_per_day.reset_index()
 top_users_per_day_df = top_users_per_day_df.drop(columns = ['score'], axis = 1)
-column_rename_mapping = {'posted_time': 'День', 'user_id': 'ID користувача', 'problem_id' : 'ID задачі'}
+column_rename_mapping = {'posted_time': 'День', 'user_id': 'ID користувача', 'problem_id' : 'кількість задачі'}
 top_users_per_day_df.rename(columns=column_rename_mapping, inplace=True)
 top_users_per_day_df.to_csv('templates/csv_files/топ користувачів за день.csv', index=False, encoding='utf-8')
 
@@ -433,72 +434,51 @@ data = preprocessing(data)
 
 #data = data[data['score'] == 100]
 
+user_highest_scores = {}
+
 difficulty_counts = {
     'L1': [0, 0, 0, 0, 0],  # >= 30%, >= 50%, >= 60%, >= 74%, >= 90%
     'L2': [0, 0, 0, 0, 0],
     'L3': [0, 0, 0, 0, 0]
 }
-unique_users_l1 = set()
-unique_users_l2 = set()
-unique_users_l3 = set()
-#user_levels = {}
+
 for index, row in data.iterrows():
     user_id = row['user_id']
     difficulty = row['problem_level']
     percent_solved = row['score']
 
-    '''if user_id in user_levels and user_levels[user_id] == difficulty:
-        continue
+    if user_id in user_highest_scores:
+        if difficulty in user_highest_scores[user_id]:
+            user_highest_scores[user_id][difficulty] = max(user_highest_scores[user_id][difficulty], percent_solved)
+        else:
+            user_highest_scores[user_id][difficulty] = percent_solved
+    else:
+        user_highest_scores[user_id] = {difficulty: percent_solved}
 
-    user_levels[user_id] = difficulty'''
-
-    if difficulty == 'L1' and user_id not in unique_users_l1:
-        unique_users_l1.add(user_id)
+for user_id, scores in user_highest_scores.items():
+    for difficulty, percent_solved in scores.items():
         if percent_solved >= 30:
-            difficulty_counts['L1'][0] += 1
+            difficulty_counts[difficulty][0] += 1
         if percent_solved >= 50:
-            difficulty_counts['L1'][1] += 1
+            difficulty_counts[difficulty][1] += 1
         if percent_solved >= 60:
-            difficulty_counts['L1'][2] += 1
+            difficulty_counts[difficulty][2] += 1
         if percent_solved >= 74:
-            difficulty_counts['L1'][3] += 1
+            difficulty_counts[difficulty][3] += 1
         if percent_solved >= 90:
-            difficulty_counts['L1'][4] += 1
-    elif difficulty == 'L2' and user_id not in unique_users_l2:
-        unique_users_l2.add(user_id)
-        if percent_solved >= 30:
-            difficulty_counts['L2'][0] += 1
-        if percent_solved >= 50:
-            difficulty_counts['L2'][1] += 1
-        if percent_solved >= 60:
-            difficulty_counts['L2'][2] += 1
-        if percent_solved >= 74:
-            difficulty_counts['L2'][3] += 1
-        if percent_solved >= 90:
-            difficulty_counts['L2'][4] += 1
-    elif difficulty == 'L3' and user_id not in unique_users_l3:
-        unique_users_l3.add(user_id)
-        if percent_solved >= 30:
-            difficulty_counts['L3'][0] += 1
-        if percent_solved >= 50:
-            difficulty_counts['L3'][1] += 1
-        if percent_solved >= 60:
-            difficulty_counts['L3'][2] += 1
-        if percent_solved >= 74:
-            difficulty_counts['L3'][3] += 1
-        if percent_solved >= 90:
-            difficulty_counts['L3'][4] += 1
+            difficulty_counts[difficulty][4] += 1
+        
 
-
-
-difficulty_counts = pd.DataFrame.from_dict(difficulty_counts, orient='index', columns=['набрано балів >= 30%', 'набрано балів >= 50%', 
-                                                                                       'набрано балів >= 60%', 'набрано балів >= 74%', 
-                                                                                       'набрано балів >= 90%'])
+difficulty_counts = pd.DataFrame.from_dict(difficulty_counts, orient='index',
+                                          columns=['набрано балів >= 30%', 'набрано балів >= 50%',
+                                                   'набрано балів >= 60%', 'набрано балів >= 74%',
+                                                   'набрано балів >= 90%'])
 
 difficulty_counts['Рівень'] = ["L1", "L2", "L3"]
-difficulty_counts= difficulty_counts[['Рівень'] + [col for col in difficulty_counts if col != 'Рівень']]
+difficulty_counts = difficulty_counts[['Рівень'] + [col for col in difficulty_counts if col != 'Рівень']]
 
 print(difficulty_counts)
+
 difficulty_counts.to_csv('templates/csv_files/результати за групами.csv', index=False, encoding='utf-8')
 
 #4ая табличка 
@@ -582,7 +562,12 @@ user_scores_sorted = user_scores.sort_values(by='score', ascending=False)
 top_10_users = user_scores_sorted.head(10)
 column_rename_mapping = {'user_id': 'ID користовуча', 'score' : 'бал'}
 top_10_users.rename(columns=column_rename_mapping, inplace=True)
+top_10_users['ID користовуча'] = top_10_users['ID користовуча'].astype(int)
 print(top_10_users)
+top_10_users['ID користовуча'] = top_10_users['ID користовуча'].astype(int)
+#top_10_users['ID користовуча'] = top_10_users['ID користовуча'].astype(str)
+#top_10_users['ID користовуча'] = top_10_users['ID користовуча'].astype(int).astype(str)
+#top_10_users['ID користовуча'] = top_10_users['ID користовуча'].str.rstrip('.0')
 
 top_10_users.to_csv('templates/csv_files/топ учасників за набраними балами.csv', index=False, encoding='utf-8')
 
@@ -606,9 +591,16 @@ for class_name in sorted_df['class'].unique():
 
 top_users_df = pd.concat(top_users.values())
 
-top_users_df = top_users_df.head(10)
-top_users_df = top_users_df.sort_values(by=['user_id'])
-column_rename_mapping = {'class' : 'клас', 'user_id': 'ID користовуча', 'score' : 'бал'}
+top_users_df = top_users_df.head(17)
+'''custom_dict = {'5': 0, '6': 1, '7': 2, '8': 3, '9': 4, '10+': 5} 
+top_users_df = top_users_df.sort_values(by=['class', 'score'], key=lambda x: x.map(custom_dict),  ascending=[True, False])'''
+
+custom_order = ['5', '6', '7', '8', '9', '10+']
+top_users_df['class'] = pd.Categorical(top_users_df['class'], categories=custom_order, ordered=True)
+top_users_df = top_users_df.sort_values(by=['class', 'score'], ascending=[True, True])
+
+#top_users_df = top_users_df.reset_index(drop=True)
+column_rename_mapping = {'class' : 'клас', 'user_id': 'ID користовуча', 'score' : 'кількість розв\'язаних задач'}
 top_users_df.rename(columns=column_rename_mapping, inplace=True)
 print(top_users_df)
 
