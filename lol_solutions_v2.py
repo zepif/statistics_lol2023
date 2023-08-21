@@ -303,12 +303,20 @@ plt.close()
 data = pd.read_csv("LOL2023_solutions_last.csv", sep=';', header=0, error_bad_lines = False)
 data = preprocessing(data)
 
-nums = [3123, 3124, 3125, 3126, 3127, 3129, 3130, 3131, 3132, 3133, 3135, 3136,
+'''nums = [3123, 3124, 3125, 3126, 3127, 3129, 3130, 3131, 3132, 3133, 3135, 3136,
         3137, 3138, 3139, 3141, 3142, 3143, 3144, 3145, 3147, 3148, 3149, 3150,
-        3151]
+        3151]'''
+nums = []
+count = 0
+for i in range(3123, 4000):
+    if count < 5:
+        nums.append(i)
+        count += 1
+    else:
+        count = 0
 
 def transform_number(num):
-    for i in range(25):
+    for i in range(100):
         if (num == nums[i]):
             t = i
             break
